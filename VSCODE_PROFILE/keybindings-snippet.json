@@ -1,0 +1,37 @@
+[
+    {
+        "key": "cmd+shift+k",
+        "command": "cursor.chat.toggle",
+        "when": "editorTextFocus",
+        "description": "Toggle Cursor AI chat panel"
+    },
+    {
+        "key": "ctrl+shift+k",
+        "command": "cursor.chat.toggle",
+        "when": "editorTextFocus && isWindows",
+        "description": "Toggle Cursor AI chat panel (Windows)"
+    },
+    {
+        "key": "cmd+shift+l",
+        "command": "cursor.chat.newSession",
+        "description": "Start new Cursor AI chat session"
+    },
+    {
+        "key": "ctrl+shift+l",
+        "command": "cursor.chat.newSession",
+        "when": "isWindows",
+        "description": "Start new Cursor AI chat session (Windows)"
+    },
+    {
+        "key": "cmd+i",
+        "command": "cursor.inlineChat",
+        "when": "editorTextFocus",
+        "description": "Trigger inline AI completion"
+    },
+    {
+        "key": "ctrl+i",
+        "command": "cursor.inlineChat",
+        "when": "editorTextFocus && isWindows",
+        "description": "Trigger inline AI completion (Windows)"
+    }
+]

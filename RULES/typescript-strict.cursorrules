@@ -1,0 +1,256 @@
+# Cursor Rules for TypeScript (General/Strict Mode)
+
+This configuration enforces strict TypeScript best practices for any framework or vanilla TS projects.
+
+## 1. Core Principles
+- **Strict Mode**: Always enabled (`"strict": true` in tsconfig.json)
+- **No `any`**: Use `unknown` if type is truly unknown
+- **Explicit Types**: Don't rely solely on inference for public APIs
+- **Modern Syntax**: ES2022+ features (top-level await, private fields, etc.)
+
+## 2. Type System Rules
+- **Prefer Interfaces for Objects**:
+    ```typescript
+    // ✅ Good
+    interface User {
+        id: string;
+        name: string;
+        email: string;
+    }
+    
+    // ❌ Avoid (unless you need union/intersection)
+    type User = {
+        id: string;
+        name: string;
+    }
+    ```
+- **Use Type for Unions/Primitives**:
+    ```typescript
+    type Status = 'pending' | 'active' | 'inactive';
+    type ID = string | number;
+    ```
+- **Discriminated Unions for Complex Types**:
+    ```typescript
+    type Result<T> = 
+        | { success: true; data: T }
+        | { success: false; error: string };
+    ```
+
+## 3. Function Typing
+- **Explicit Return Types** for public functions:
+    ```typescript
+    // ✅ Good
+    function getUserById(id: string): Promise<User | null> {
+        // implementation
+    }
+    
+    // ❌ Avoid (inference is fine for internal/small functions)
+    export function getUserById(id: string) {
+        // implementation
+    }
+    ```
+- **Use `void` for No Return**:
+    ```typescript
+    function logError(message: string): void {
+        console.error(message);
+    }
+    ```
+
+## 4. Generics Best Practices
+- **Name generics descriptively** (not just `T`):
+    ```typescript
+    // ✅ Good
+    function mapArray<TInput, TOutput>(
+        arr: TInput[],
+        mapper: (item: TInput) => TOutput
+    ): TOutput[] {
+        return arr.map(mapper);
+    }
+    
+    // ❌ Less clear
+    function mapArray<T, U>(arr: T[], mapper: (item: T) => U): U[] {
+        return arr.map(mapper);
+    }
+    ```
+- **Constrain generics when needed**:
+    ```typescript
+    function getProperty<T extends object, K extends keyof T>(
+        obj: T,
+        key: K
+    ): T[K] {
+        return obj[key];
+    }
+    ```
+
+## 5. Null/Undefined Handling
+- **Use strict null checks** (`strictNullChecks: true`)
+- **Prefer `undefined` over `null`** (except for JSON APIs)
+- **Use optional chaining and nullish coalescing**:
+    ```typescript
+    const userName = user?.profile?.name ?? 'Anonymous';
+    ```
+- **Type guards for null checks**:
+    ```typescript
+    function isUser(value: unknown): value is User {
+        return typeof value === 'object' 
+            && value !== null 
+            && 'id' in value 
+            && 'name' in value;
+    }
+    ```
+
+## 6. Async/Await Patterns
+- **Always handle promise rejections**:
+    ```typescript
+    async function fetchUser(id: string): Promise<User> {
+        try {
+            const response = await fetch(`/api/users/${id}`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Failed to fetch user:', error);
+            throw error; // Re-throw after logging
+        }
+    }
+    ```
+- **Type error objects**:
+    ```typescript
+    async function riskyOperation(): Promise<void> {
+        try {
+            await someAsyncCall();
+        } catch (error) {
+            if (error instanceof Error) {
+                console.error(error.message);
+            } else {
+                console.error('Unknown error:', error);
+            }
+        }
+    }
+    ```
+
+## 7. Utility Types
+- **Use built-in utility types**:
+    ```typescript
+    // Partial - make all properties optional
+    type PartialUser = Partial<User>;
+    
+    // Required - make all properties required
+    type RequiredUser = Required<User>;
+    
+    // Pick - select specific properties
+    type UserPreview = Pick<User, 'id' | 'name'>;
+    
+    // Omit - exclude specific properties
+    type UserWithoutEmail = Omit<User, 'email'>;
+    
+    // Record - create object type
+    type UserMap = Record<string, User>;
+    
+    // ReturnType - extract return type
+    type FetchResult = ReturnType<typeof fetchUser>;
+    ```
+
+## 8. Enums vs String Literals
+- **Prefer const string unions** over enums:
+    ```typescript
+    // ✅ Preferred
+    const UserRole = {
+        ADMIN: 'admin',
+        USER: 'user',
+        GUEST: 'guest',
+    } as const;
+    
+    type UserRole = typeof UserRole[keyof typeof UserRole];
+    
+    // ❌ Avoid enums (unless you need reverse mapping)
+    enum UserRole {
+        ADMIN = 'admin',
+        USER = 'user',
+    }
+    ```
+
+## 9. Class Typing
+- **Use access modifiers**:
+    ```typescript
+    class UserService {
+        private apiUrl: string;
+        protected cache: Map<string, User>;
+        
+        constructor(apiUrl: string) {
+            this.apiUrl = apiUrl;
+            this.cache = new Map();
+        }
+        
+        public async getUser(id: string): Promise<User> {
+            const cached = this.getCachedUser(id);
+            if (cached) return cached;
+            
+            const user = await this.fetchUser(id);
+            this.cache.set(id, user);
+            return user;
+        }
+        
+        private getCachedUser(id: string): User | undefined {
+            return this.cache.get(id);
+        }
+        
+        private async fetchUser(id: string): Promise<User> {
+            // implementation
+        }
+    }
+    ```
+
+## 10. Module System
+- **Use ES Modules** (import/export):
+    ```typescript
+    // ✅ Good
+    export interface User {
+        id: string;
+    }
+    
+    export function createUser(data: unknown): User {
+        // implementation
+    }
+    
+    // ❌ Avoid CommonJS (unless targeting Node.js without ESM)
+    module.exports = { User, createUser };
+    ```
+- **Use barrel exports** for clean imports:
+    ```typescript
+    // index.ts
+    export * from './user';
+    export * from './post';
+    export { default as UserService } from './UserService';
+    ```
+
+## 11. Type Assertions (Careful!)
+- **Avoid `as` unless absolutely necessary**:
+    ```typescript
+    // ❌ Dangerous
+    const user = data as User;
+    
+    // ✅ Better - validate first
+    function isUser(data: unknown): data is User {
+        // validation logic
+    }
+    
+    if (isUser(data)) {
+        // data is now typed as User
+    }
+    ```
+- **Use `satisfies` (TypeScript 4.9+)** for type checking without widening:
+    ```typescript
+    const config = {
+        apiUrl: 'https://api.example.com',
+        timeout: 5000,
+    } satisfies Config; // Ensures it matches Config but keeps literal types
+    ```
+
+## 12. Forbidden Patterns
+❌ **`any` type** - Use `unknown` instead  
+❌ **Non-null assertion (`!`)** - Use proper type guards  
+❌ **`@ts-ignore`** - Fix the actual type issue  
+❌ **Implicit any** - Fix with proper types  
+❌ **Untyped external libraries** - Add `@types/*` or create declaration files

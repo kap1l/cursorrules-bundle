@@ -1,0 +1,461 @@
+# Cursor Rules for Go Microservices
+
+This configuration enforces Go best practices for building production microservices.
+
+## 1. Core Principles
+- **Go Version**: 1.21+ (use modern features like `slices`, `maps`, `cmp`)
+- **Framework**: Gin, Echo, or standard `net/http` with `gorilla/mux`
+- **Project Layout**: Follow Standard Go Project Layout
+- **Error Handling**: Explicit error returns, no panic in production code
+- **Concurrency**: Use goroutines and channels idiomatically
+
+## 2. Project Structure
+```
+project/
+├── cmd/
+│   └── server/
+│       └── main.go          # Application entry point
+├── internal/
+│   ├── handlers/            # HTTP handlers
+│   ├── services/            # Business logic
+│   ├── repository/          # Data access layer
+│   └── models/              # Domain models
+├── pkg/                     # Reusable packages
+│   ├── middleware/
+│   └── utils/
+├── config/                  # Configuration
+├── migrations/              # Database migrations
+└── go.mod
+```
+
+## 3. Naming Conventions
+- **Files**: `snake_case.go` (e.g., `user_handler.go`)
+- **Packages**: Short, lowercase, no underscores (e.g., `handlers`, `auth`)
+- **Exported**: Start with uppercase (e.g., `UserService`)
+- **Unexported**: Start with lowercase (e.g., `validateEmail`)
+- **Interfaces**: End with `er` for single-method (e.g., `Reader`, `Writer`)
+
+## 4. Error Handling
+- **Return errors explicitly**:
+    ```go
+    func GetUser(id string) (*User, error) {
+        user, err := db.FindUser(id)
+        if err != nil {
+            return nil, fmt.Errorf("failed to find user %s: %w", id, err)
+        }
+        return user, nil
+    }
+    ```
+- **Wrap errors with context**:
+    ```go
+    import "fmt"
+    
+    if err != nil {
+        return fmt.Errorf("user service: %w", err)
+    }
+    ```
+- **Custom error types for business logic**:
+    ```go
+    type ValidationError struct {
+        Field string
+        Message string
+    }
+    
+    func (e *ValidationError) Error() string {
+        return fmt.Sprintf("validation error on %s: %s", e.Field, e.Message)
+    }
+    ```
+
+## 5. HTTP Handler Pattern (Gin Framework)
+```go
+package handlers
+
+import (
+    "net/http"
+    "github.com/gin-gonic/gin"
+    "yourproject/internal/services"
+)
+
+type UserHandler struct {
+    userService *services.UserService
+}
+
+func NewUserHandler(userService *services.UserService) *UserHandler {
+    return &UserHandler{
+        userService: userService,
+    }
+}
+
+// GetUser godoc
+// @Summary Get user by ID
+// @Description Retrieve user details by user ID
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} models.User
+// @Failure 404 {object} ErrorResponse
+// @Router /users/{id} [get]
+func (h *UserHandler) GetUser(c *gin.Context) {
+    id := c.Param("id")
+    
+    user, err := h.userService.GetUserByID(c.Request.Context(), id)
+    if err != nil {
+        if errors.Is(err, services.ErrUserNotFound) {
+            c.JSON(http.StatusNotFound, ErrorResponse{
+                Error: "User not found",
+            })
+            return
+        }
+        c.JSON(http.StatusInternalServerError, ErrorResponse{
+            Error: "Internal server error",
+        })
+        return
+    }
+    
+    c.JSON(http.StatusOK, user)
+}
+
+type ErrorResponse struct {
+    Error string `json:"error"`
+}
+```
+
+## 6. Service Layer Pattern
+```go
+package services
+
+import (
+    "context"
+    "errors"
+    "yourproject/internal/models"
+    "yourproject/internal/repository"
+)
+
+var (
+    ErrUserNotFound = errors.New("user not found")
+    ErrInvalidInput = errors.New("invalid input")
+)
+
+type UserService struct {
+    repo repository.UserRepository
+}
+
+func NewUserService(repo repository.UserRepository) *UserService {
+    return &UserService{repo: repo}
+}
+
+func (s *UserService) GetUserByID(ctx context.Context, id string) (*models.User, error) {
+    if id == "" {
+        return nil, ErrInvalidInput
+    }
+    
+    user, err := s.repo.FindByID(ctx, id)
+    if err != nil {
+        if errors.Is(err, repository.ErrNotFound) {
+            return nil, ErrUserNotFound
+        }
+        return nil, fmt.Errorf("service: failed to get user: %w", err)
+    }
+    
+    return user, nil
+}
+```
+
+## 7. Repository Pattern (with sqlx)
+```go
+package repository
+
+import (
+    "context"
+    "database/sql"
+    "errors"
+    "github.com/jmoiron/sqlx"
+    "yourproject/internal/models"
+)
+
+var ErrNotFound = errors.New("record not found")
+
+type UserRepository interface {
+    FindByID(ctx context.Context, id string) (*models.User, error)
+    Create(ctx context.Context, user *models.User) error
+}
+
+type userRepository struct {
+    db *sqlx.DB
+}
+
+func NewUserRepository(db *sqlx.DB) UserRepository {
+    return &userRepository{db: db}
+}
+
+func (r *userRepository) FindByID(ctx context.Context, id string) (*models.User, error) {
+    var user models.User
+    
+    query := `SELECT id, email, name, created_at FROM users WHERE id = $1`
+    err := r.db.GetContext(ctx, &user, query, id)
+    if err != nil {
+        if errors.Is(err, sql.ErrNoRows) {
+            return nil, ErrNotFound
+        }
+        return nil, fmt.Errorf("database error: %w", err)
+    }
+    
+    return &user, nil
+}
+```
+
+## 8. Models and Validation
+```go
+package models
+
+import (
+    "time"
+    "github.com/go-playground/validator/v10"
+)
+
+type User struct {
+    ID        string    `json:"id" db:"id"`
+    Email     string    `json:"email" db:"email" validate:"required,email"`
+    Name      string    `json:"name" db:"name" validate:"required,min=2,max=100"`
+    CreatedAt time.Time `json:"created_at" db:"created_at"`
+}
+
+type CreateUserRequest struct {
+    Email string `json:"email" validate:"required,email"`
+    Name  string `json:"name" validate:"required,min=2,max=100"`
+}
+
+var validate = validator.New()
+
+func (r *CreateUserRequest) Validate() error {
+    return validate.Struct(r)
+}
+```
+
+## 9. Dependency Injection (Wire or Manual)
+```go
+// internal/app/app.go
+package app
+
+import (
+    "github.com/gin-gonic/gin"
+    "github.com/jmoiron/sqlx"
+    "yourproject/internal/handlers"
+    "yourproject/internal/repository"
+    "yourproject/internal/services"
+)
+
+type App struct {
+    router *gin.Engine
+    db     *sqlx.DB
+}
+
+func NewApp(db *sqlx.DB) *App {
+    // Repositories
+    userRepo := repository.NewUserRepository(db)
+    
+    // Services
+    userService := services.NewUserService(userRepo)
+    
+    // Handlers
+    userHandler := handlers.NewUserHandler(userService)
+    
+    // Router
+    router := gin.Default()
+    
+    // Routes
+    api := router.Group("/api/v1")
+    {
+        api.GET("/users/:id", userHandler.GetUser)
+        api.POST("/users", userHandler.CreateUser)
+    }
+    
+    return &App{
+        router: router,
+        db:     db,
+    }
+}
+
+func (a *App) Run(addr string) error {
+    return a.router.Run(addr)
+}
+```
+
+## 10. Concurrency Patterns
+```go
+// Worker pool pattern
+func processUsers(users []User) []Result {
+    numWorkers := 10
+    jobs := make(chan User, len(users))
+    results := make(chan Result, len(users))
+    
+    // Start workers
+    for w := 0; w < numWorkers; w++ {
+        go worker(jobs, results)
+    }
+    
+    // Send jobs
+    for _, user := range users {
+        jobs <- user
+    }
+    close(jobs)
+    
+    // Collect results
+    var output []Result
+    for i := 0; i < len(users); i++ {
+        output = append(output, <-results)
+    }
+    
+    return output
+}
+
+func worker(jobs <-chan User, results chan<- Result) {
+    for user := range jobs {
+        // Process user
+        result := processUser(user)
+        results <- result
+    }
+}
+```
+
+## 11. Configuration Management
+```go
+package config
+
+import (
+    "github.com/spf13/viper"
+)
+
+type Config struct {
+    Server   ServerConfig
+    Database DatabaseConfig
+}
+
+type ServerConfig struct {
+    Port string `mapstructure:"port"`
+    Env  string `mapstructure:"env"`
+}
+
+type DatabaseConfig struct {
+    Host     string `mapstructure:"host"`
+    Port     int    `mapstructure:"port"`
+    User     string `mapstructure:"user"`
+    Password string `mapstructure:"password"`
+    DBName   string `mapstructure:"dbname"`
+}
+
+func Load() (*Config, error) {
+    viper.SetConfigName("config")
+    viper.SetConfigType("yaml")
+    viper.AddConfigPath("./config")
+    viper.AutomaticEnv()
+    
+    if err := viper.ReadInConfig(); err != nil {
+        return nil, err
+    }
+    
+    var cfg Config
+    if err := viper.Unmarshal(&cfg); err != nil {
+        return nil, err
+    }
+    
+    return &cfg, nil
+}
+```
+
+## 12. Middleware Pattern
+```go
+package middleware
+
+import (
+    "time"
+    "github.com/gin-gonic/gin"
+    "log"
+)
+
+func Logger() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        start := time.Now()
+        path := c.Request.URL.Path
+        
+        c.Next()
+        
+        latency := time.Since(start)
+        status := c.Writer.Status()
+        
+        log.Printf("[%s] %s %d %v", c.Request.Method, path, status, latency)
+    }
+}
+
+func AuthRequired() gin.HandlerFunc {
+    return func(c *gin.Context) {
+        token := c.GetHeader("Authorization")
+        
+        if token == "" {
+            c.JSON(401, gin.H{"error": "unauthorized"})
+            c.Abort()
+            return
+        }
+        
+        // Validate token...
+        
+        c.Next()
+    }
+}
+```
+
+## 13. Testing
+```go
+package handlers_test
+
+import (
+    "net/http"
+    "net/http/httptest"
+    "testing"
+    "github.com/gin-gonic/gin"
+    "github.com/stretchr/testify/assert"
+    "github.com/stretchr/testify/mock"
+)
+
+type MockUserService struct {
+    mock.Mock
+}
+
+func (m *MockUserService) GetUserByID(ctx context.Context, id string) (*models.User, error) {
+    args := m.Called(ctx, id)
+    if args.Get(0) == nil {
+        return nil, args.Error(1)
+    }
+    return args.Get(0).(*models.User), args.Error(1)
+}
+
+func TestGetUser(t *testing.T) {
+    mockService := new(MockUserService)
+    handler := handlers.NewUserHandler(mockService)
+    
+    mockService.On("GetUserByID", mock.Anything, "123").Return(&models.User{
+        ID: "123",
+        Name: "John",
+    }, nil)
+    
+    gin.SetMode(gin.TestMode)
+    router := gin.New()
+    router.GET("/users/:id", handler.GetUser)
+    
+    req := httptest.NewRequest("GET", "/users/123", nil)
+    w := httptest.NewRecorder()
+    
+    router.ServeHTTP(w, req)
+    
+    assert.Equal(t, http.StatusOK, w.Code)
+    mockService.AssertExpectations(t)
+}
+```
+
+## 14. Forbidden Patterns
+❌ **Panic in production code** (use errors)  
+❌ **Ignoring errors** (`_, _ = someFunc()`)  
+❌ **Global mutable state**  
+❌ **Goroutines without proper cleanup**  
+❌ **Using `init()` for side effects**

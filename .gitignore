@@ -1,0 +1,30 @@
+# Compiled packages and ZIPs
+*.zip
+AI-Coding-Workflow-Bundle-*
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env
+
+# MacOS
+.DS_Store
+
+# Editor
+.vscode/
+.cursor/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

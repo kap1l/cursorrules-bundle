@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>PRO THUMBNAIL</title>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap"
+        rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            background: #111;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* 600x600 SQUARE CONTAINER */
+        .square {
+            width: 600px;
+            height: 600px;
+            position: relative;
+            background: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            border: 2px dashed #ffff00;
+            /* CROP GUIDE */
+            box-sizing: border-box;
+        }
+
+        /* Ambient Glow */
+        .glow {
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.2) 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        .glow-accent {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            background: radial-gradient(circle, rgba(168, 85, 247, 0.15) 0%, transparent 70%);
+            top: 20%;
+            right: 10%;
+            pointer-events: none;
+        }
+
+        /* Floating Code Card */
+        .card {
+            width: 380px;
+            background: rgba(13, 17, 23, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow:
+                0 20px 50px rgba(0, 0, 0, 0.5),
+                0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+            backdrop-filter: blur(10px);
+            transform: perspective(1000px) rotateY(-5deg) rotateX(5deg);
+            z-index: 10;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 8px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+        }
+
+        .red {
+            background: #ff5f56;
+        }
+
+        .yellow {
+            background: #ffbd2e;
+        }
+
+        .green {
+            background: #27c93f;
+        }
+
+        .card-title {
+            margin-left: auto;
+            color: #8b949e;
+            font-size: 12px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #e2e8f0;
+        }
+
+        .k {
+            color: #ff7b72;
+        }
+
+        .f {
+            color: #d2a8ff;
+        }
+
+        .s {
+            color: #a5d6ff;
+        }
+
+        .t {
+            color: #79c0ff;
+        }
+
+        .c {
+            color: #6e7681;
+            font-style: italic;
+        }
+
+        /* Typography */
+        .title-group {
+            margin-top: 40px;
+            text-align: center;
+            z-index: 20;
+        }
+
+        .main-title {
+            font-size: 36px;
+            font-weight: 900;
+            line-height: 1.1;
+            background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .subtitle {
+            font-size: 16px;
+            color: #94abff;
+            font-weight: 600;
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Badges */
+        .pro-badge {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            backdrop-filter: blur(5px);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="square">
+        <div class="glow"></div>
+        <div class="glow-accent"></div>
+        <div class="pro-badge">v1.0</div>
+
+        <!-- Floating 3D Card -->
+        <div class="card">
+            <div class="card-header">
+                <div class="dot red"></div>
+                <div class="dot yellow"></div>
+                <div class="dot green"></div>
+                <div class="card-title">.cursorrules</div>
+            </div>
+            <div class="code">
+                <span class="c">// AI output matching</span><br>
+                <span class="c">// senior standards</span><br>
+                <span class="k">interface</span> <span class="t">Workflow</span> {<br>
+                &nbsp;&nbsp;clean: <span class="t">true</span>;<br>
+                &nbsp;&nbsp;fast: <span class="t">true</span>;<br>
+                &nbsp;&nbsp;bugs: <span class="k">never</span>;<br>
+                }
+            </div>
+        </div>
+
+        <div class="title-group">
+            <div class="main-title">AI Coding<br>Workflow</div>
+            <div class="subtitle">Production Ready</div>
+        </div>
+    </div>
+
+</body>
+
+</html>

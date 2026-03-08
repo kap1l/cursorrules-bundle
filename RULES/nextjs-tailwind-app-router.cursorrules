@@ -1,0 +1,66 @@
+# Cursor Rules for Next.js App Router + Tailwind CSS
+
+This configuration instructs Cursor to follow strict Next.js 14+ best practices.
+
+## 1. Core Principles
+- **Framework**: Next.js 14+ App Router.
+- **Styling**: Tailwind CSS (no custom CSS classes unless absolutely necessary).
+- **Icons**: Lucide React (`import { IconName } from 'lucide-react'`).
+- **Components**: Functional components only. No class components.
+- **Language**: TypeScript. Always use strict types. Avoid `any`.
+
+## 2. File Structure & Naming
+- **Routes**: Use the App Router file conventions: `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`, `not-found.tsx`.
+- **Components**: Place reusable components in `@/components/ui` or `@/components/shared`.
+- **Naming**:
+    - Files: `kebab-case.tsx` (e.g., `user-card.tsx`).
+    - Components: `PascalCase` (e.g., `UserCard`).
+    - Utilities: `camelCase` (e.g., `formatDate.ts`).
+
+## 3. Server vs. Client Components
+- **Default behavior**: Assume all components are Server Components unless `useState`, `useEffect`, or event handlers are needed.
+- **Client Directive**: Add `'use client'` at the *very top* of the file only when necessary.
+- **Data Fetching**: Use Server Actions (`'use server'`) for mutations. Use `fetch` options (`{ next: { revalidate: 3600 } }`) for data caching strategy.
+
+## 4. Coding Standards
+- **Arrow Functions**: Use arrow functions (`const Component = () => {}`) for all components.
+- **Props**: Destructure props in the function signature.
+- **Imports**: Use absolute imports starting with `@/`.
+    - `import { Button } from '@/components/ui/button'`
+- **Tailwind**:
+    - Use meaningful utility classes.
+    - Group layout classes first (`flex`, `grid`, `absolute`), then sizing/spacing, then visuals (`bg-`, `text-`, `border-`).
+    - Use `cn()` utility (from clsx/tailwind-merge) for conditional class names.
+
+## 5. Typical Component Template
+```tsx
+import { cn } from "@/lib/utils";
+import { MoveRight } from "lucide-react";
+
+interface FeatureCardProps {
+    title: string;
+    description: string;
+    className?: string;
+}
+
+export const FeatureCard = ({ title, description, className }: FeatureCardProps) => {
+    return (
+        <div className={cn("p-6 border rounded-lg hover:shadow-lg transition-shadow bg-card text-card-foreground", className)}>
+            <h3 className="text-xl font-semibold mb-2 flex items-center gap-2">
+                {title} <MoveRight className="w-4 h-4 text-muted-foreground" />
+            </h3>
+            <p className="text-muted-foreground leading-relaxed">
+                {description}
+            </p>
+        </div>
+    );
+};
+```
+
+## 6. Error Handling
+- Use `console.error` for catching errors in `try/catch` blocks but provide user-friendly feedback via toast notifications or error boundaries.
+- Never swallow errors silently.
+
+## 7. Performance
+- Use `next/image` for all images providing `width`, `height`, and `alt`.
+- Use `dynamic` imports for heavy client components (`next/dynamic`).

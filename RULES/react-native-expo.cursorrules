@@ -1,0 +1,367 @@
+# Cursor Rules for React Native + Expo
+
+This configuration instructs Cursor to follow React Native and Expo best practices for mobile app development.
+
+## 1. Core Principles
+- **Framework**: React Native with Expo SDK 50+
+- **Routing**: Expo Router (file-based routing)
+- **Language**: TypeScript strict mode
+- **Styling**: StyleSheet API or NativeWind (Tailwind for RN)
+- **Components**: Functional components with hooks only
+- **UI Library**: React Native Paper, Tamagui, or NativeBase (choose one per project)
+
+## 2. File Structure & Naming
+- **Expo Router File Structure**:
+    ```
+    app/
+    ├── (tabs)/             # Tab navigation group
+    │   ├── index.tsx       # Home screen
+    │   ├── profile.tsx     # Profile screen
+    │   └── _layout.tsx     # Tab layout
+    ├── modal.tsx           # Modal screen
+    ├── [id].tsx            # Dynamic route
+    └── _layout.tsx         # Root layout
+    components/
+    ├── ui/                 # Reusable UI components
+    └── shared/             # Shared components
+    hooks/                  # Custom hooks
+    utils/                  # Utility functions
+    ```
+- **Naming**:
+    - Components: `PascalCase.tsx` (e.g., `UserCard.tsx`)
+    - Screens: `kebab-case.tsx` or `index.tsx` in folders
+    - Hooks: `useCamelCase.ts` (e.g., `useAuth.ts`)
+    - Utils: `camelCase.ts` (e.g., `formatDate.ts`)
+
+## 3. Component Standards
+- **Use Functional Components** with TypeScript
+- **Destructure Props** in function signature
+- **Memo for Performance**: Use `React.memo` for expensive components
+- **Hooks**: useState, useEffect, useCallback, useMemo appropriately
+
+## 4. Coding Standards
+- **Type Everything**: No `any` types
+    ```typescript
+    interface UserCardProps {
+        user: User;
+        onPress?: (userId: string) => void;
+    }
+    ```
+- **Styled Components Pattern**:
+    ```typescript
+    const styles = StyleSheet.create({
+        container: {
+            flex: 1,
+            padding: 16,
+            backgroundColor: '#fff',
+        },
+        title: {
+            fontSize: 20,
+            fontWeight: '600',
+            color: '#000',
+        },
+    });
+    ```
+- **Platform-Specific Code**: Use `Platform.select()`
+    ```typescript
+    import { Platform } from 'react-native';
+    
+    const shadowStyle = Platform.select({
+        ios: {
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.1,
+            shadowRadius: 4,
+        },
+        android: {
+            elevation: 4,
+        },
+    });
+    ```
+
+## 5. Typical Component Template
+```typescript
+import React, { memo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+
+interface UserCardProps {
+    userId: string;
+    name: string;
+    email: string;
+    onPress?: (userId: string) => void;
+}
+
+export const UserCard = memo<UserCardProps>(({ 
+    userId, 
+    name, 
+    email, 
+    onPress 
+}) => {
+    const handlePress = () => {
+        onPress?.(userId);
+    };
+
+    return (
+        <TouchableOpacity 
+            style={styles.container} 
+            onPress={handlePress}
+            activeOpacity={0.7}
+        >
+            <Text style={styles.name}>{name}</Text>
+            <Text style={styles.email}>{email}</Text>
+        </TouchableOpacity>
+    );
+});
+
+UserCard.displayName = 'UserCard';
+
+const styles = StyleSheet.create({
+    container: {
+        padding: 16,
+        backgroundColor: '#fff',
+        borderRadius: 12,
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 3,
+    },
+    name: {
+        fontSize: 18,
+        fontWeight: '600',
+        color: '#1a1a1a',
+        marginBottom: 4,
+    },
+    email: {
+        fontSize: 14,
+        color: '#666',
+    },
+});
+```
+
+## 6. Navigation with Expo Router
+- **File-based routing**: Use file names for routes
+- **Typed routes**: Use `Href` type from expo-router
+- **Navigation**: Use `router.push()`, `router.back()`, etc.
+
+```typescript
+import { router, Href } from 'expo-router';
+
+// Navigate to a screen
+router.push('/profile');
+
+// Navigate with params
+router.push({
+    pathname: '/user/[id]',
+    params: { id: '123' }
+} as Href);
+
+// Go back
+router.back();
+```
+
+## 7. State Management
+- **Local State**: useState for component-level state
+- **Global State**: 
+    - Zustand (recommended for simplicity)
+    - React Context + useReducer
+    - Redux Toolkit (for complex apps)
+
+```typescript
+// Zustand store example
+import { create } from 'zustand';
+
+interface AuthStore {
+    user: User | null;
+    isAuthenticated: boolean;
+    login: (user: User) => void;
+    logout: () => void;
+}
+
+export const useAuthStore = create<AuthStore>((set) => ({
+    user: null,
+    isAuthenticated: false,
+    login: (user) => set({ user, isAuthenticated: true }),
+    logout: () => set({ user: null, isAuthenticated: false }),
+}));
+```
+
+## 8. Data Fetching
+- **Use TanStack Query (React Query)** for API calls
+- **Async Storage**: For local persistence (not secure storage)
+- **Expo SecureStore**: For sensitive data (tokens, credentials)
+
+```typescript
+import { useQuery } from '@tanstack/react-query';
+import * as SecureStore from 'expo-secure-store';
+
+// API fetch with React Query
+export const useUser = (userId: string) => {
+    return useQuery({
+        queryKey: ['user', userId],
+        queryFn: async () => {
+            const response = await fetch(`/api/users/${userId}`);
+            if (!response.ok) throw new Error('Failed to fetch user');
+            return response.json();
+        },
+    });
+};
+
+// Secure storage
+const saveToken = async (token: string) => {
+    await SecureStore.setItemAsync('authToken', token);
+};
+
+const getToken = async () => {
+    return await SecureStore.getItemAsync('authToken');
+};
+```
+
+## 9. Performance Optimization
+- **FlatList for Lists**: Never use `.map()` for long lists
+    ```typescript
+    <FlatList
+        data={users}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => <UserCard user={item} />}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={5}
+    />
+    ```
+- **Image Optimization**: Use Expo Image
+    ```typescript
+    import { Image } from 'expo-image';
+    
+    <Image
+        source={{ uri: imageUrl }}
+        style={styles.image}
+        contentFit="cover"
+        transition={200}
+    />
+    ```
+- **useMemo and useCallback**: Prevent unnecessary re-renders
+    ```typescript
+    const expensiveValue = useMemo(() => 
+        computeExpensiveValue(data), 
+        [data]
+    );
+    
+    const handlePress = useCallback(() => {
+        onItemPress(item.id);
+    }, [item.id, onItemPress]);
+    ```
+
+## 10. Native Features
+- **Camera**: Use `expo-camera` or `expo-image-picker`
+- **Location**: Use `expo-location`
+- **Notifications**: Use `expo-notifications`
+- **Permissions**: Always request before accessing native features
+
+```typescript
+import * as Location from 'expo-location';
+
+const requestLocationPermission = async () => {
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    
+    if (status !== 'granted') {
+        Alert.alert('Permission denied', 'Location access is required');
+        return;
+    }
+    
+    const location = await Location.getCurrentPositionAsync({});
+    return location;
+};
+```
+
+## 11. Error Boundaries
+- **Wrap screens in error boundaries**
+- **Use expo-error-reporter** for production
+
+```typescript
+import { ErrorBoundary } from 'react-error-boundary';
+
+function ErrorFallback({ error, resetErrorBoundary }: { error: Error; resetErrorBoundary: () => void }) {
+    return (
+        <View style={styles.errorContainer}>
+            <Text>Something went wrong:</Text>
+            <Text>{error.message}</Text>
+            <Button title="Try again" onPress={resetErrorBoundary} />
+        </View>
+    );
+}
+
+export default function App() {
+    return (
+        <ErrorBoundary FallbackComponent={ErrorFallback}>
+            <RootNavigator />
+        </ErrorBoundary>
+    );
+}
+```
+
+## 12. Testing
+- **Jest + React Native Testing Library**
+- **Test user interactions, not implementation**
+
+```typescript
+import { render, fireEvent } from '@testing-library/react-native';
+import { UserCard } from './UserCard';
+
+test('calls onPress when pressed', () => {
+    const onPress = jest.fn();
+    const { getByText } = render(
+        <UserCard 
+            userId="1" 
+            name="John Doe" 
+            email="john@example.com" 
+            onPress={onPress} 
+        />
+    );
+    
+    fireEvent.press(getByText('John Doe'));
+    expect(onPress).toHaveBeenCalledWith('1');
+});
+```
+
+## 13. Styling Best Practices
+- **Use constants for colors, spacing, fonts**
+    ```typescript
+    // constants/theme.ts
+    export const Colors = {
+        primary: '#6366f1',
+        background: '#ffffff',
+        text: '#1a1a1a',
+        error: '#ef4444',
+    } as const;
+    
+    export const Spacing = {
+        xs: 4,
+        sm: 8,
+        md: 16,
+        lg: 24,
+        xl: 32,
+    } as const;
+    ```
+- **Responsive Design**: Use Dimensions or react-native-size-matters
+    ```typescript
+    import { Dimensions } from 'react-native';
+    
+    const { width, height } = Dimensions.get('window');
+    
+    const styles = StyleSheet.create({
+        container: {
+            width: width * 0.9,
+            padding: width > 768 ? 24 : 16, // Tablet vs Phone
+        },
+    });
+    ```
+
+## 14. Forbidden Patterns
+❌ **No class components**  
+❌ **No inline styles** (except dynamic values)  
+❌ **No `.map()` for long lists** (use FlatList)  
+❌ **No `any` types**  
+❌ **No unhandled promises**  
+❌ **No direct state mutations**

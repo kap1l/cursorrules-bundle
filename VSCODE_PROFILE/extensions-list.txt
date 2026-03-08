@@ -1,0 +1,46 @@
+# Required Extensions (Core Functionality)
+esbenp.prettier-vscode          # Code formatter
+dbaeumer.vscode-eslint           # JavaScript/TypeScript linting
+bradlc.vscode-tailwindcss        # Tailwind CSS IntelliSense
+GitHub.copilot                   # GitHub Copilot (if using Copilot instead of Cursor)
+
+# Highly Recommended (Quality of Life)
+usernamehw.errorlens             # Inline error highlighting
+PKief.material-icon-theme        # Better file icons
+eamodio.gitlens                  # Advanced Git integration
+christian-kohler.path-intellisense  # Auto-complete file paths
+formulahendry.auto-rename-tag    # Auto-rename paired HTML/JSX tags
+
+# Language-Specific (Install as needed)
+
+## JavaScript/TypeScript
+dsznajder.es7-react-js-snippets  # React snippets
+rvest.vs-code-prettier-eslint    # Prettier + ESLint integration
+steoates.autoimport              # Auto-import dependencies
+
+## Python
+ms-python.python                 # Python language support
+ms-python.vscode-pylance         # Python IntelliSense
+charliermarsh.ruff               # Fast Python linter
+
+## Go
+golang.go                        # Go language support
+
+## Markdown
+yzhang.markdown-all-in-one       # Markdown productivity
+shd101wyy.markdown-preview-enhanced  # Enhanced Markdown preview
+
+# Theme (Optional but Recommended)
+GitHub.github-vscode-theme       # GitHub Dark theme (preferred for AI coding)
+# OR
+antfu.theme-vitesse              # Vitesse theme (alternative)
+
+# AI-Specific
+Continue.continue                # Open-source Copilot alternative (if not using Cursor)
+
+# Testing
+Orta.vscode-jest                 # Jest test runner integration
+vitest.explorer                  # Vitest test explorer
+
+# Note: To install all at once, copy extension IDs and use:
+# code --install-extension <extension-id>

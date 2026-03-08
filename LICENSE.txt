@@ -1,0 +1,49 @@
+AI Coding Workflow Bundle - Personal Use License
+
+Copyright (c) 2026. All rights reserved.
+
+GRANT OF LICENSE
+
+Subject to the terms and conditions of this License, you are granted a non-exclusive, 
+non-transferable, personal license to use the AI Coding Workflow Bundle.
+
+PERMITTED USES:
+✅ Use in unlimited personal projects (hobby or commercial)
+✅ Use in client work and freelance projects
+✅ Modify the files for your own use
+✅ Learn from and adapt the patterns
+
+NOT PERMITTED:
+❌ Redistribution or resale of the files (original or modified)
+❌ Sharing with team members or colleagues (they must purchase their own license)
+❌ Publishing the files publicly (GitHub, forums, blogs, etc.)
+❌ Using the files as templates for a competing product
+❌ Claiming authorship of the original content
+
+TEAM LICENSE
+
+If you wish to share this bundle with your team, please purchase a Team License.
+Contact: subs.kch@gmail.com for team pricing.
+
+WARRANTY DISCLAIMER
+
+This product is provided "AS IS" without warranty of any kind, express or implied,
+including but not limited to warranties of merchantability, fitness for a particular
+purpose, or non-infringement.
+
+LIMITATION OF LIABILITY
+
+In no event shall the author or copyright holder be liable for any claim, damages,
+or other liability arising from the use of this product.
+
+REFUND POLICY
+
+30-day money-back guarantee. If you're not satisfied with the bundle, request a refund
+within 30 days of purchase through Gumroad.
+
+UPDATES
+
+Purchasers receive all future updates to the bundle at no additional cost. Updates will
+be delivered via the original Gumroad download link.
+
+For questions or support, contact: subs.kch@gmail.com

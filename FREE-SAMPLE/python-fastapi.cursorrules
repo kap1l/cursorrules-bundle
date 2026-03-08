@@ -1,0 +1,244 @@
+# Cursor Rules for Python + FastAPI Backend
+
+This configuration instructs Cursor to follow modern Python 3.11+ and FastAPI best practices.
+
+## 1. Core Principles
+- **Framework**: FastAPI 0.100+
+- **Python Version**: 3.11+ (use modern syntax)
+- **Type Hints**: ALWAYS. No untyped parameters.
+- **Models**: Pydantic v2 for request/response validation
+- **Async**: Use `async def` for all I/O operations (database, external APIs)
+- **Database**: SQLAlchemy 2.0+ with async support
+
+## 2. File Structure & Naming
+- **Project Layout**:
+    ```
+    app/
+    ├── main.py              # FastAPI app instance
+    ├── api/
+    │   └── routes/          # API endpoints
+    │       ├── users.py
+    │       └── posts.py
+    ├── models/              # SQLAlchemy models
+    ├── schemas/             # Pydantic schemas
+    ├── services/            # Business logic
+    ├── core/
+    │   ├── config.py        # Settings (using pydantic-settings)
+    │   └── dependencies.py  # Dependency injection
+    └── tests/
+    ```
+- **Naming**:
+    - Files: `snake_case.py` (e.g., `user_service.py`)
+    - Classes: `PascalCase` (e.g., `UserService`)
+    - Functions: `snake_case` (e.g., `get_user_by_id`)
+    - Constants: `UPPER_SNAKE_CASE` (e.g., `MAX_RETRY_ATTEMPTS`)
+
+## 3. Endpoint Definition Standards
+- **Routers**: Use `APIRouter` for organizing endpoints
+- **Path Operations**: Order params as: `path params → query params → body → dependencies`
+- **Status Codes**: Use `status` enum from `fastapi`
+- **Response Models**: Always specify `response_model` in decorators
+
+## 4. Coding Standards
+- **Type Hints**: Required for ALL function signatures
+    ```python
+    async def get_user(user_id: int, db: AsyncSession = Depends(get_db)) -> UserResponse:
+        pass
+    ```
+- **Docstrings**: Google style for all public functions
+    ```python
+    async def create_user(user_data: UserCreate) -> User:
+        """Create a new user in the database.
+        
+        Args:
+            user_data: User creation data including email and password.
+            
+        Returns:
+            Created user instance with assigned ID.
+            
+        Raises:
+            HTTPException: If email already exists (409 Conflict).
+        """
+    ```
+- **Error Handling**: Use `HTTPException` with proper status codes
+    ```python
+    from fastapi import HTTPException, status
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    ```
+- **Dependency Injection**: Use `Depends()` for database sessions, auth, etc.
+    ```python
+    from fastapi import Depends
+    
+    async def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
+        # Validate token and return user
+        pass
+    ```
+
+## 5. Typical Endpoint Template
+```python
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.dependencies import get_db
+from app.schemas.user import UserCreate, UserResponse
+from app.services.user_service import UserService
+
+router = APIRouter(prefix="/users", tags=["users"])
+
+@router.post(
+    "/",
+    response_model=UserResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new user"
+)
+async def create_user(
+    user_data: UserCreate,
+    db: AsyncSession = Depends(get_db)
+) -> UserResponse:
+    """
+    Create a new user with the following information:
+    - **email**: Valid email address (unique)
+    - **username**: 3-20 characters
+    - **password**: Minimum 8 characters
+    """
+    service = UserService(db)
+    
+    try:
+        user = await service.create_user(user_data)
+        return UserResponse.model_validate(user)
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(e)
+        )
+```
+
+## 6. Pydantic Schema Standards
+- **Base Config**: ALWAYS Use `ConfigDict` for configuration (safer typing)
+- **Validation**: Use Field() for constraints
+- **Separate Schemas**: Create, Update, Response models
+
+```python
+from datetime import datetime
+from pydantic import BaseModel, EmailStr, Field, ConfigDict
+
+class UserBase(BaseModel):
+    email: EmailStr
+    username: str = Field(..., min_length=3, max_length=20)
+
+class UserCreate(UserBase):
+    password: str = Field(..., min_length=8)
+
+class UserUpdate(BaseModel):
+    email: EmailStr | None = None
+    username: str | None = Field(None, min_length=3, max_length=20)
+
+class UserResponse(UserBase):
+    id: int
+    created_at: datetime
+    
+    model_config = ConfigDict(from_attributes=True)
+```
+
+## 7. Database Patterns
+- **Async Sessions**: Always use `AsyncSession`
+- **Context Managers**: Use `async with` for transactions
+- **Query Patterns**: Use SQLAlchemy 2.0 syntax (`select()`, not Query API)
+
+```python
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+async def get_user_by_email(db: AsyncSession, email: str) -> User | None:
+    result = await db.execute(
+        select(User).where(User.email == email)
+    )
+    return result.scalar_one_or_none()
+```
+
+## 8. Error Handling
+- **Use HTTPException** for API errors
+- **Custom Exception Classes** for business logic
+- **Exception Handlers** for global error handling
+
+```python
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
+
+app = FastAPI()
+
+@app.exception_handler(ValueError)
+async def value_error_handler(request: Request, exc: ValueError):
+    return JSONResponse(
+        status_code=400,
+        content={"detail": str(exc)}
+    )
+```
+
+## 9. Performance & Best Practices
+- **Background Tasks**: Use `BackgroundTasks` for non-blocking operations
+    ```python
+    from fastapi import BackgroundTasks
+    
+    @router.post("/send-email")
+    async def send_email(
+        email: str,
+        background_tasks: BackgroundTasks
+    ):
+        background_tasks.add_task(send_email_task, email)
+        return {"message": "Email queued"}
+    ```
+- **Caching**: Use Redis or in-memory caching for frequent queries
+- **Pagination**: Implement limit/offset for list endpoints
+    ```python
+    @router.get("/users")
+    async def list_users(
+        skip: int = 0,
+        limit: int = Query(default=10, le=100)
+    ):
+        pass
+    ```
+
+## 10. Testing Standards
+- **pytest-asyncio**: For async test functions
+- **httpx**: For testing FastAPI endpoints
+- **Fixtures**: Use pytest fixtures for database setup
+
+```python
+import pytest
+from httpx import AsyncClient
+from app.main import app
+
+@pytest.mark.asyncio
+async def test_create_user():
+    async with AsyncClient(app=app, base_url="http://test") as client:
+        response = await client.post(
+            "/users",
+            json={"email": "test@example.com", "username": "testuser"}
+        )
+        assert response.status_code == 201
+        assert response.json()["email"] == "test@example.com"
+```
+
+## 11. Security
+- **Password Hashing**: Use `passlib` with bcrypt
+- **OAuth2**: Implement JWT tokens for authentication
+- **CORS**: Configure properly for frontend apps
+- **Environment Variables**: Never hardcode secrets (use `.env` files)
+
+```python
+from passlib.context import CryptContext
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def hash_password(password: str) -> str:
+    return pwd_context.hash(password)
+
+def verify_password(plain: str, hashed: str) -> bool:
+    return pwd_context.verify(plain, hashed)
+```
